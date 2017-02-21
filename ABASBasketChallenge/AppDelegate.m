@@ -7,8 +7,9 @@
 //
 
 #import "AppDelegate.h"
-#import "DetailViewController.h"
-#import "MasterViewController.h"
+
+#import <OHHTTPStubs/OHHTTPStubs.h>
+#import <OHHTTPStubs/OHPathHelpers.h>
 
 @interface AppDelegate () <UISplitViewControllerDelegate>
 
@@ -18,18 +19,11 @@
 
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+    [self configureStubs];
     // Override point for customization after application launch.
-    UISplitViewController *splitViewController = (UISplitViewController *)self.window.rootViewController;
-    UINavigationController *navigationController = [splitViewController.viewControllers lastObject];
-    navigationController.topViewController.navigationItem.leftBarButtonItem = splitViewController.displayModeButtonItem;
-    splitViewController.delegate = self;
-
-    UINavigationController *masterNavigationController = splitViewController.viewControllers[0];
-    MasterViewController *controller = (MasterViewController *)masterNavigationController.topViewController;
-    controller.managedObjectContext = self.persistentContainer.viewContext;
+    
     return YES;
 }
-
 
 - (void)applicationWillResignActive:(UIApplication *)application {
     // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
@@ -58,18 +52,67 @@
     // Saves changes in the application's managed object context before the application terminates.
     [self saveContext];
 }
-
-
-#pragma mark - Split view
-
-- (BOOL)splitViewController:(UISplitViewController *)splitViewController collapseSecondaryViewController:(UIViewController *)secondaryViewController ontoPrimaryViewController:(UIViewController *)primaryViewController {
-    if ([secondaryViewController isKindOfClass:[UINavigationController class]] && [[(UINavigationController *)secondaryViewController topViewController] isKindOfClass:[DetailViewController class]] && ([(DetailViewController *)[(UINavigationController *)secondaryViewController topViewController] detailItem] == nil)) {
-        // Return YES to indicate that we have handled the collapse by doing nothing; the secondary controller will be discarded.
-        return YES;
-    } else {
-        return NO;
-    }
+    
+#pragma mark - Configuration Methods
+    
+- (void)configureStubs {
+    static id<OHHTTPStubsDescriptor> textStub = nil;
+    textStub = [OHHTTPStubs stubRequestsPassingTest:^BOOL(NSURLRequest *request) {
+        return [self isABARequest:request];
+    } withStubResponse:^OHHTTPStubsResponse *(NSURLRequest *request) {
+        return [self responseForRequest:request];
+    }];
 }
+    
+#pragma mark - Mocking Methods
+    
+- (BOOL)isABARequest:(NSURLRequest *)request {
+    return [request.URL.host rangeOfString:@"aba-systems.com.au"].location != NSNotFound;
+}
+    
+- (OHHTTPStubsResponse *)responseForRequest:(NSURLRequest *)request {
+    NSData *requestData = request.HTTPBody;
+    NSError *error = nil;
+    NSDictionary *requestJSON = [NSJSONSerialization JSONObjectWithData:requestData options:0 error:&error];
+    
+    NSMutableDictionary *responseJSON = [NSMutableDictionary new];
+    int statusCode = 200;
+    NSDictionary *headers = @{@"Content-Type":@"application/json"};
+    
+    if ([request.HTTPMethod isEqualToString:@"POST"] == NO) {
+        statusCode = 405;
+    }
+    
+    if ([[self endpointForRequest:request] isEqual:@"baskets/"]) {
+        responseJSON = requestJSON.mutableCopy;
+        [responseJSON setObject:[NSNumber numberWithInt:arc4random() % 99] forKey:@"id"];
+    }
+    else if ([[self endpointForRequest:request] isEqual:@"basketitems/"]) {
+        if ([requestJSON[@"type"] isKindOfClass:[NSNumber class]]) {
+            responseJSON = requestJSON.mutableCopy;
+            [responseJSON setObject:[NSNumber numberWithInt:arc4random() % 99] forKey:@"id"];
+        } else {
+            statusCode = 400;
+        }
+    }
+    else if ([[self endpointForRequest:request] isEqual:@"basketitemtypes/"]) {
+        responseJSON = requestJSON.mutableCopy;
+        [responseJSON setObject:[NSNumber numberWithInt:arc4random() % 99] forKey:@"id"];
+    } else {
+        statusCode = 404;
+    }
+    
+    NSData *data = [NSJSONSerialization dataWithJSONObject:responseJSON
+                                                   options:NSJSONWritingPrettyPrinted
+                                                     error:&error];
+    
+    return [[OHHTTPStubsResponse responseWithData:data statusCode:statusCode headers:headers] requestTime:0.0f responseTime:OHHTTPStubsDownloadSpeedWifi];
+}
+    
+- (NSString *)endpointForRequest:(NSURLRequest *)request {
+    return [request.URL.absoluteString componentsSeparatedByString:@"https://aba-systems.com.au/api/v1/"].lastObject;
+}
+
 
 #pragma mark - Core Data stack
 
