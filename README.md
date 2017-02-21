@@ -1,7 +1,7 @@
 # iOSBasketChallenge
 iOS Basket Challenge
 
-This challenge will take 2-4 hours, so if you don't have the time just
+You should expect this challenge to take 2-4 hours, so if you don't have the time just
 do want you can do and make comments for the next steps you would take
 
 Create a shopping basket, basket item and basket item types.
