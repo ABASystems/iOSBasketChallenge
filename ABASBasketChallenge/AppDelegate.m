@@ -88,7 +88,7 @@
         [responseJSON setObject:[NSNumber numberWithInt:arc4random() % 99] forKey:@"id"];
     }
     else if ([[self endpointForRequest:request] isEqual:@"basketitems/"]) {
-        if ([requestJSON[@"type"] isKindOfClass:[NSNumber class]]) {
+        if ([requestJSON[@"type"] isKindOfClass:[NSNumber class]] && [requestJSON[@"type"] integerValue] > 0) {
             responseJSON = requestJSON.mutableCopy;
             [responseJSON setObject:[NSNumber numberWithInt:arc4random() % 99] forKey:@"id"];
         } else {

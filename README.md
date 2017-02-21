@@ -1,6 +1,8 @@
 # iOSBasketChallenge
 iOS Basket Challenge
 
+This challenge will take 2-4 hours, so if you don't have the time just
+do want you can do and make comments for the next steps you would take
 
 Create a shopping basket, basket item and basket item types.
 
@@ -23,6 +25,6 @@ https://aba-systems.com.au/api/v1/basketitems/
 https://aba-systems.com.au/api/v1/basketitemtypes/
 
 
-Must store and fetch all objects from core data.
+MUST store and fetch all objects from core data. (The .xcdatamodeld has been created for you)
 
 Extra credit given for being able to sychronize data after being offline.
